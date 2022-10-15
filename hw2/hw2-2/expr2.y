@@ -32,12 +32,13 @@ lines	:	lines expr ';' { printf("%s\n", $2); }
 		|
 		;
 
-expr	:	expr ADD expr { $$ = (char*)malloc(strlen($1) + strlen($3) + 1); strcpy($$,$1); strcat($$,$3); strcat($$,"+ "); }
-		|	expr MINUS expr { $$ = (char*)malloc(strlen($1) + strlen($3) + 1); strcpy($$,$1); strcat($$,$3); strcat($$,"- "); }
-		|	expr MUL expr { $$ = (char*)malloc(strlen($1) + strlen($3) + 1); strcpy($$,$1); strcat($$,$3); strcat($$,"* "); }
-		|	expr DIV expr { $$ = (char*)malloc(strlen($1) + strlen($3) + 1); strcpy($$,$1); strcat($$,$3); strcat($$,"/ "); }
+expr	:	expr ADD expr { $$ = (char*)malloc(strlen($1) + strlen($3) + 2); strcpy($$,$1); strcat($$,$3); strcat($$,"+ "); }
+		|	expr MINUS expr { $$ = (char*)malloc(strlen($1) + strlen($3) + 2); strcpy($$,$1); strcat($$,$3); strcat($$,"- "); }
+		|	expr MUL expr { $$ = (char*)malloc(strlen($1) + strlen($3) + 2); strcpy($$,$1); strcat($$,$3); strcat($$,"* "); }
+		|	expr DIV expr { $$ = (char*)malloc(strlen($1) + strlen($3) + 2); strcpy($$,$1); strcat($$,$3); strcat($$,"/ "); }
 		|	'(' expr')' { $$ = (char*)malloc(strlen($2) + 1); strcpy($$, $2); }
-		|	NUMBER { $$ = (char*)malloc(strlen($1) + 1); strcpy($$, $1); strcat($$," ");}
+		|	MINUS expr %prec UMINUS { $$ = (char*)malloc(strlen($2) + 50); char numStr2[51]="-";strcat(numStr2,$2);  strcpy($$, numStr2); strcat($$," ");}
+		|	NUMBER {$$ = (char*)malloc(strlen($1) + 1); strcpy($$, $1); strcat($$," ");}
 		|	ID { $$ = (char*)malloc(strlen($1) + 1); strcpy($$, $1); strcat($$," ");}
 		;
 
