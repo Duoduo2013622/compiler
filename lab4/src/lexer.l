@@ -38,7 +38,7 @@
     int stcnt;//为每一个作用域编号
 
     void DEBUG_FOR_LAB4(std::string s){
-        if(s[0]=='I' && s[1]=='D'){
+        if((s[0]=='I' && s[1]=='D') || (s[0]=='A' && s[1] == 'R')){
             if(state){
                 std::string DEBUG_INFO = s +to_string(yylineno)+"\t" + to_string(cnt) + "\t"+to_string(stcnt)+"\n";
                 fputs(DEBUG_INFO.c_str(), yyout);
@@ -64,6 +64,7 @@ OCT (0[0-7]+)
 HEX (0[Xx][[0-9a-fA-F]+)
 FNUM  {DECI}*(\.{DIGIT}+)?((e|E)[+\-]?{DECI}+)?
 ID [[:alpha:]_][[:alpha:][:digit:]_]*
+ARRAY ({ID}({LBRACK}{DECI}{RBRACK})+)
 EOL (\r\n|\n)
 WHITE [\t ]
 
@@ -552,6 +553,30 @@ commentlineend \n
         addChar(yyleng);
     #else
         return ID;
+    #endif
+}
+{ARRAY} {
+    #ifdef ONLY_FOR_LEX
+        string str=yytext,str1="ARRAY\t\t";
+        str1+=str;
+        if(str.length()%8==0)str1+="\t";
+        else str1+="\t\t";
+        str=str.substr(0,1);
+        bool isIn=false;
+        for(int i=0;i<=st[stnum].num;i++){
+            if(st[stnum].s[i].compare(str)==0){
+                isIn=true;
+                break;
+            }
+        }
+        if(!isIn){
+            st[stnum].s[st[stnum].num]=str;
+            st[stnum].num++;
+        }
+        DEBUG_FOR_LAB4(str1);
+        addChar(yyleng);
+    #else
+        return ARRAY;
     #endif
 }
 {EOL} cnt=0;
