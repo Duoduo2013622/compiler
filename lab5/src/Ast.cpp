@@ -154,6 +154,21 @@ int UnaryExpr::getValue() {
     return value;
 }
 
+void CallExpr::output(int level) {
+    std::string name, type;
+    int scope;
+    name = symbolEntry->toStr();
+    type = symbolEntry->getType()->toStr();
+    scope = dynamic_cast<IdentifierSymbolEntry*>(symbolEntry)->getScope();
+    fprintf(yyout, "%*cCallExpr\tfunction name: %s\tscope: %d\ttype: %s\n",
+            level, ' ', name.c_str(), scope, type.c_str());
+    Node* temp = param;
+    while (temp) {
+        temp->output(level + 4);
+        temp = temp->getNext();
+    }
+}
+
 void Constant::output(int level)
 {
     std::string type, value;
@@ -185,14 +200,15 @@ void Id::output(int level)
 void CompoundStmt::output(int level)
 {
     fprintf(yyout, "%*cCompoundStmt\n", level, ' ');
-    stmt->output(level + 4);
+    if (stmt)
+        stmt->output(level + 4);
 }
 
 void SeqNode::output(int level)
 {
-    fprintf(yyout, "%*cSequence\n", level, ' ');
-    stmt1->output(level + 4);
-    stmt2->output(level + 4);
+    //fprintf(yyout, "%*cSequence\n", level, ' ');
+    stmt1->output(level);
+    stmt2->output(level);
 }
 
 void DeclStmt::output(int level)
@@ -262,6 +278,11 @@ void AssignStmt::output(int level)
     expr->output(level + 4);
 }
 
+void ExprStmt::output(int level) {
+    fprintf(yyout, "%*cExprStmt\n", level, ' ');
+    expr->output(level + 4);
+}
+
 void FunctionDef::output(int level)
 {
     std::string name, type;
@@ -271,3 +292,4 @@ void FunctionDef::output(int level)
             name.c_str(), type.c_str());
     stmt->output(level + 4);
 }
+

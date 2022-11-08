@@ -32,8 +32,8 @@
 %token ADD SUB OR AND LESS ASSIGN EQ GRAEQ LESEQ NEQ PLUSASSIGN MINUSASSIGN MULASSIGN DIVASSIGN GRA MUL DIV INCRE DECRE MOD NOT
 %token RETURN
 
-%nterm <stmttype> Stmts Stmt AssignStmt BlockStmt IfStmt WhileStmt ForStmt ReturnStmt DeclStmt FuncDef VarDecl ConstDecl VarDef VarList ConstDef ConstList BreakStmt ContinueStmt BlankStmt
-%nterm <exprtype> Exp AddExp Cond LOrExp PrimaryExp LVal RelExp LAndExp EqExp UnaryExp MulExp ConstExp ConstInitVal
+%nterm <stmttype> Stmts Stmt ExprStmt AssignStmt BlockStmt IfStmt WhileStmt ForStmt ReturnStmt DeclStmt FuncDef VarDecl ConstDecl VarDef VarList ConstDef ConstList BreakStmt ContinueStmt BlankStmt FuncFParam FuncFParams MFuncFParams
+%nterm <exprtype> Exp AddExp Cond LOrExp PrimaryExp LVal RelExp LAndExp EqExp UnaryExp MulExp ConstExp ConstInitVal FuncRParams
 %nterm <type> Type
 
 %precedence THEN
@@ -52,6 +52,7 @@ Stmts
     ;
 Stmt
     : AssignStmt {$$=$1;}
+    | ExprStmt {$$=$1;}
     | BlockStmt {$$=$1;}
     | BlankStmt {$$=$1;}
     | IfStmt {$$=$1;}
@@ -84,6 +85,11 @@ AssignStmt
         $$ = new AssignStmt($1, $3);
     }
     ;
+ExprStmt
+    : Exp SEMI {
+        $$ = new ExprStmt($1);
+    }
+    ;
 BlockStmt
     :   LBRACE 
         {identifiers = new SymbolTable(identifiers);} 
@@ -94,6 +100,10 @@ BlockStmt
             identifiers = identifiers->getPrev();
             delete top;
         }
+    |
+     LBRACE RBRACE {
+        $$ = new CompoundStmt();
+    }
     ;
 BlankStmt
     : SEMI {
@@ -171,6 +181,28 @@ PrimaryExp
 UnaryExp
     :
     PrimaryExp {$$ = $1;}
+    | ID LPAREN FuncRParams RPAREN {
+        SymbolEntry* se;
+        se = identifiers->lookup($1);
+        if(se == nullptr)
+        {
+            fprintf(stderr, "function \"%s\" is undefined\n", (char*)$1);
+            delete [](char*)$1;
+            assert(se != nullptr);
+        }
+        $$ = new CallExpr(se, $3);
+    }
+    | ID LPAREN RPAREN {
+        SymbolEntry* se;
+        se = identifiers->lookup($1);
+        if(se == nullptr)
+        {
+            fprintf(stderr, "function \"%s\" is undefined\n", (char*)$1);
+            delete [](char*)$1;
+            assert(se != nullptr);
+        }
+        $$ = new CallExpr(se);
+    }
     |
     ADD UnaryExp {$$ = $2;}
     | SUB UnaryExp {
@@ -298,7 +330,31 @@ Type
         $$ = TypeSystem::voidType;
     }
     ;
-
+FuncRParams 
+    : Exp {$$ = $1;}
+    | FuncRParams COMMA Exp {
+        $$ = $1;
+        $$->setNext($3);
+    }
+MFuncFParams
+    : FuncFParams {$$ = $1;}
+    | %empty {$$ = nullptr;}
+FuncFParams
+    : FuncFParams COMMA FuncFParam {
+        $$ = $1;
+        $$->setNext($3);
+    }
+    | FuncFParam {$$ = $1;}
+    ;
+FuncFParam
+    : Type ID {
+        SymbolEntry* se;
+        se = new IdentifierSymbolEntry($1, $2, identifiers->getLevel());
+        identifiers->install($2, se);
+        $$ = new DeclStmt(new Id(se));
+        delete []$2;
+    }
+    ;
 DeclStmt
     :
     VarDecl {$$ = $1;}
@@ -379,13 +435,25 @@ FuncDef
         identifiers->install($2, se);
         identifiers = new SymbolTable(identifiers);
     }
-    LPAREN RPAREN
+    LPAREN MFuncFParams RPAREN
+    {
+        Type* funcType;
+        std::vector<Type*> vec;
+        DeclStmt* temp = (DeclStmt*)$5;
+        while(temp){
+            vec.push_back(temp->getId()->getSymbolEntry()->getType());
+            temp = (DeclStmt*)(temp->getNext());
+        }
+        funcType = new FunctionType($1, vec);
+        SymbolEntry* se = new IdentifierSymbolEntry(funcType, $2, identifiers->getPrev()->getLevel());
+        identifiers->getPrev()->install($2, se);
+    } 
     BlockStmt
     {
         SymbolEntry *se;
         se = identifiers->lookup($2);
         assert(se != nullptr);
-        $$ = new FunctionDef(se, $6);
+        $$ = new FunctionDef(se, (DeclStmt*)$5, $8);
         SymbolTable *top = identifiers;
         identifiers = identifiers->getPrev();
         delete top;
@@ -399,3 +467,4 @@ int yyerror(char const* message)
     std::cerr<<message<<std::endl;
     return -1;
 }
+

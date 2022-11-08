@@ -53,6 +53,16 @@ class UnaryExpr : public ExprNode {
     int getValue();
 };
 
+class CallExpr : public ExprNode {
+   private:
+    ExprNode* param;
+
+   public:
+    CallExpr(SymbolEntry* se, ExprNode* param = nullptr)
+        : ExprNode(se), param(param){};
+    void output(int level);
+};
+
 class Constant : public ExprNode
 {
 public:
@@ -66,6 +76,7 @@ class Id : public ExprNode
 public:
     Id(SymbolEntry *se) : ExprNode(se){};
     void output(int level);
+    SymbolEntry* getSymbolEntry() { return symbolEntry; };
     int getValue();
 };
 
@@ -77,7 +88,7 @@ class CompoundStmt : public StmtNode
 private:
     StmtNode *stmt;
 public:
-    CompoundStmt(StmtNode *stmt) : stmt(stmt) {};
+    CompoundStmt(StmtNode* stmt = nullptr) : stmt(stmt){};
     void output(int level);
 };
 
@@ -98,6 +109,7 @@ private:
 public:
     DeclStmt(Id *id , ExprNode* expr = nullptr) : id(id),expr(expr){};
     void output(int level);
+    Id* getId() { return id; };
 };
 
 class BlankStmt : public StmtNode {
@@ -180,13 +192,23 @@ public:
     void output(int level);
 };
 
+class ExprStmt : public StmtNode {
+   private:
+    ExprNode* expr;
+
+   public:
+    ExprStmt(ExprNode* expr) : expr(expr){};
+    void output(int level);
+};
+
 class FunctionDef : public StmtNode
 {
 private:
     SymbolEntry *se;
+    DeclStmt* decl;
     StmtNode *stmt;
 public:
-    FunctionDef(SymbolEntry *se, StmtNode *stmt) : se(se), stmt(stmt){};
+    FunctionDef(SymbolEntry* se, DeclStmt* decl, StmtNode* stmt): se(se), decl(decl), stmt(stmt){};
     void output(int level);
 };
 
@@ -201,3 +223,4 @@ public:
 };
 
 #endif
+
