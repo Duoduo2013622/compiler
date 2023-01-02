@@ -1,0 +1,59 @@
+类型检查：
+1.变量未声明和重复声明（同一作用域）
+2.int到bool的隐式类型转换
+3.return语句返回类型与函数声明类型是否匹配
+4.break、continue是否在while中
+5.数值表达式计算中所有运算数类型是否正确
+6.函数未声明 以及不符合重载的函数重复声明
+7.函数调用时 形参以及实参类型和数目不一致
+
+1.4.6在parser.y以及bool SymbolTable::install中实现
+其余在ast中实现
+
+
+
+中间代码生成：
+
+BB.cpp中 insertBefore函数
+Funtion.cpp中output 
+
+instruction.h 扩展Binary 增加 GepInstruction
+Instruction.cpp中增加 GepInstruction
+
+Unit.cpp中扩展output 增加insertGlobal和insertDeclare
+ast中所有genCode
+WhileStmt::genCode() new UncondBrInstruction(cond_bb,bb); //这句话有用吗？ 
+declstmt声明链是否需要考虑
+析构函数有空写一下
+
+if(expr->isDeclExpr()){
+                BasicBlock* bb = builder->getInsertBB();
+                ExprNode* temp = expr;
+                std::stack<ExprNode*> stk;
+                std::vector<int> idx;
+                idx.push_back(0);
+                while (temp) {
+                    if (temp->isDeclExpr()) {
+                        stk.push(temp);
+                        idx.push_back(0);
+                        temp = ((DeclExpr*)temp)->getExpr();
+                        continue;
+                    }
+                    while (true) {
+                        if (temp->getNext()) {
+                            temp = (ExprNode*)(temp->getNext());
+                            idx[idx.size() - 1]++;
+                            break;
+                        } else {
+                            temp = stk.top();
+                            stk.pop();
+                            idx.pop_back();
+                            if (stk.empty())
+                                break;
+                        }
+                    }
+                    if (stk.empty())
+                        break;
+                }
+            }
+            else{
