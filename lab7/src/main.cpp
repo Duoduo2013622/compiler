@@ -2,11 +2,14 @@
 #include <string.h>
 #include <unistd.h>
 #include "Ast.h"
+#include "LinearScan.h"
+#include "MachineCode.h"
 #include "Unit.h"
 using namespace std;
 
 Ast ast;
 Unit unit;
+MachineUnit mUnit;
 extern FILE *yyin;
 extern FILE *yyout;
 

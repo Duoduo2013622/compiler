@@ -140,7 +140,9 @@ class StackMInstrcuton : public MachineInstruction
 public:
     enum opType { PUSH, POP };
     StackMInstrcuton(MachineBlock* p, int op, 
-                MachineOperand* src,
+                std::vector<MachineOperand*> srcs,
+                     MachineOperand* src1,
+                     MachineOperand* src2 = nullptr,
                 int cond = MachineInstruction::NONE);
     void output();
 };
@@ -154,6 +156,8 @@ private:
     std::vector<MachineInstruction*> inst_list;
     std::set<MachineOperand*> live_in;
     std::set<MachineOperand*> live_out;
+    int Cond;
+
 public:
     std::vector<MachineInstruction*>& getInsts() {return inst_list;};
     std::vector<MachineInstruction*>::iterator begin() { return inst_list.begin(); };
@@ -167,6 +171,8 @@ public:
     std::vector<MachineBlock*>& getPreds() {return pred;};
     std::vector<MachineBlock*>& getSuccs() {return succ;};
     void output();
+    void setCond(int cond) { Cond = cond; };
+    MachineFunction* getParent() const { return parent; };
 };
 
 class MachineFunction
@@ -177,6 +183,8 @@ private:
     int stack_size;
     std::set<int> saved_regs;
     SymbolEntry* sym_ptr;
+    int paramscount;
+    
 public:
     std::vector<MachineBlock*>& getBlocks() {return block_list;};
     std::vector<MachineBlock*>::iterator begin() { return block_list.begin(); };
@@ -191,19 +199,34 @@ public:
     void InsertBlock(MachineBlock* block) { this->block_list.push_back(block); };
     void addSavedRegs(int regno) {saved_regs.insert(regno);};
     void output();
+    std::vector<MachineOperand*> CalleeSavedRegs(){
+        std::vector<MachineOperand*> regs;
+        for (auto it = saved_regs.begin(); it != saved_regs.end(); it++) {
+            auto reg = new MachineOperand(MachineOperand::REG, *it);
+            regs.push_back(reg);
+        }
+        return regs;
+    }
+    int ParamsNum() const { return paramscount; };
+    MachineUnit* getParent() const { return parent; };
+
 };
 
 class MachineUnit
 {
 private:
     std::vector<MachineFunction*> func_list;
+    std::vector<SymbolEntry*> globalList;
     void PrintGlobalDecl();
+    int seq;
 public:
     std::vector<MachineFunction*>& getFuncs() {return func_list;};
     std::vector<MachineFunction*>::iterator begin() { return func_list.begin(); };
     std::vector<MachineFunction*>::iterator end() { return func_list.end(); };
     void InsertFunc(MachineFunction* func) { func_list.push_back(func);};
     void output();
+    void insertGlobal(SymbolEntry*);
+    int getSeq() const { return seq; };
 };
 
 #endif

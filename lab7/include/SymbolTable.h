@@ -105,6 +105,8 @@ private:
     Operand *addr;  // The address of the identifier.
     // You can add any field you need here.
 
+    bool constant;
+
 public:
     IdentifierSymbolEntry(Type *type, std::string name, int scope,bool sysy = false);
     virtual ~IdentifierSymbolEntry() {};

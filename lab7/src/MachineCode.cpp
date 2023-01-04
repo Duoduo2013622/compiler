@@ -374,7 +374,7 @@ CmpMInstruction::CmpMInstruction(MachineBlock* p,
     this->type = MachineInstruction::CMP;
     this->op = -1;
     this->cond = cond;
-    p->setCmpCond(cond);
+    p->setCond(cond);
     this->use_list.push_back(src1);
     this->use_list.push_back(src2);
     src1->setParent(this);
@@ -442,7 +442,7 @@ MachineFunction::MachineFunction(MachineUnit* p, SymbolEntry* sym_ptr)
     this->parent = p; 
     this->sym_ptr = sym_ptr; 
     this->stack_size = 0;
-    this->paramsNum =
+    this->paramscount =
         ((FunctionType*)(sym_ptr->getType()))->getParamsSe().size();
 };
 
@@ -467,15 +467,53 @@ void MachineFunction::output()
     *  4. Allocate stack space for local variable */
     
     // Traverse all the block in block_list to print assembly code.
+    //push {fp,lr} 保存 FP 寄存器及一些 CalleeSavedRegs
+    // mov fp, sp 令 FP 寄存器指向新的栈底
+    //sub sp, sp, #12 为局部变量分配栈内空间
+    auto fp = new MachineOperand(MachineOperand::REG, 1);
+    auto sp = new MachineOperand(MachineOperand::REG, 1);
+    auto lr = new MachineOperand(MachineOperand::REG, 1);
+    (new StackMInstrcuton(nullptr, StackMInstrcuton::PUSH,CalleeSavedRegs(), fp,lr))->output();
+    (new MovMInstruction(nullptr, MovMInstruction::MOV, fp, sp))->output();
+    int space = AllocSpace(0);
+    auto spaceSize = new MachineOperand(MachineOperand::IMM, space);
+    if (space < -255 || space > 255) {
+        auto r = new MachineOperand(MachineOperand::REG, 1);
+        (new LoadMInstruction(nullptr, r, spaceSize))->output();
+        (new BinaryMInstruction(nullptr, BinaryMInstruction::SUB, sp, sp, r))
+            ->output();
+    } else {
+        (new BinaryMInstruction(nullptr, BinaryMInstruction::SUB, sp, sp, spaceSize))
+            ->output();
+    }
     for(auto iter : block_list)
         iter->output();
 }
+
 
 void MachineUnit::PrintGlobalDecl()
 {
     // TODO:
     // You need to print global variable/const declarition code;
+    std::vector<int> constIdx;
+    std::vector<int> zeroIdx;
+    if (!globalList.empty())
+        fprintf(yyout, "\t.data\n");
+    for (long unsigned int i = 0; i < globalList.size(); i++) {
+        IdentifierSymbolEntry* symbolEntry = (IdentifierSymbolEntry*)globalList[i];
+        fprintf(yyout, "\t.global %s\n", symbolEntry->toStr().c_str());
+        fprintf(yyout, "\t.align 4\n");
+        fprintf(yyout, "\t.size %s, %d\n", symbolEntry->toStr().c_str(),symbolEntry->getType()->getSize() / 8);
+        fprintf(yyout, "%s:\n", symbolEntry->toStr().c_str());
+        fprintf(yyout, "\t.word %d\n", symbolEntry->getValue());
+    }
+
 }
+
+void MachineUnit::insertGlobal(SymbolEntry* symbolEntry) {
+    globalList.push_back(symbolEntry);
+}
+
 
 void MachineUnit::output()
 {
@@ -488,6 +526,7 @@ void MachineUnit::output()
     fprintf(yyout, "\t.arch_extension crc\n");
     fprintf(yyout, "\t.arm\n");
     PrintGlobalDecl();
+    fprintf(yyout, "\t.text\n");
     for(auto iter : func_list)
         iter->output();
 }

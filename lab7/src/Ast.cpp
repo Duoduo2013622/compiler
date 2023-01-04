@@ -5,9 +5,11 @@
 #include "IRBuilder.h"
 #include <string>
 #include <iostream>
+#include "MachineCode.h"
 #include "Type.h"
 #include "Unit.h"
 extern Unit unit;
+extern MachineUnit mUnit;
 
 extern FILE *yyout;
 int Node::counter = 0;
@@ -406,6 +408,7 @@ void DeclStmt::genCode()//声明语句，包括全局、局部以及参数
         addr = new Operand(addr_se);
         se->setAddr(addr);
         unit.insertGlobal(se);
+        mUnit.insertGlobal(se);
     }
     else if(se->isLocal() || se->isParam())//增加对于参数的生成
     {

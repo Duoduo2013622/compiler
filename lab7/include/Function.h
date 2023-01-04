@@ -8,6 +8,7 @@
 #include <iostream>
 #include "BasicBlock.h"
 #include "SymbolTable.h"
+#include "AsmBuilder.h"
 #include <stack>
 #include "Ast.h"
 

@@ -4,6 +4,7 @@
 #include "Operand.h"
 #include <vector>
 #include <map>
+#include "AsmBuilder.h"
 
 class BasicBlock;
 

@@ -3,6 +3,7 @@
 #include <vector>
 #include <set>
 #include "Instruction.h"
+#include "AsmBuilder.h"
 
 class Function;
 
