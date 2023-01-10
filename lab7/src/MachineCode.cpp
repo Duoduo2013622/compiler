@@ -394,7 +394,7 @@ void CmpMInstruction::output()
 }
 
 StackMInstrcuton::StackMInstrcuton(MachineBlock* p, int op, 
-    std::vector<MachineOperand*> srcs,MachineOperand* src1,MachineOperand* src2 = nullptr,
+    std::vector<MachineOperand*> srcs,MachineOperand* src1,MachineOperand* src2 ,
     int cond)
 {
     // TODO
@@ -529,4 +529,16 @@ void MachineUnit::output()
     fprintf(yyout, "\t.text\n");
     for(auto iter : func_list)
         iter->output();
+}
+
+void MachineInstruction::insertBf(MachineInstruction* inst) {
+    auto& instructions = parent->getInsts();
+    auto it = std::find(instructions.begin(), instructions.end(), this);
+    instructions.insert(it, inst);
+}
+
+void MachineInstruction::insertAft(MachineInstruction* inst) {
+    auto& instructions = parent->getInsts();
+    auto it = std::find(instructions.begin(), instructions.end(), this);
+    instructions.insert(++it, inst);
 }

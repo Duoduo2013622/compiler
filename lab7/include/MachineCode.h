@@ -74,6 +74,9 @@ public:
     int getNo() {return no;};
     std::vector<MachineOperand*>& getDef() {return def_list;};
     std::vector<MachineOperand*>& getUse() {return use_list;};
+    MachineBlock* getParent() const { return parent; };
+    void insertBf(MachineInstruction*);
+    void insertAft(MachineInstruction*);
 };
 
 class BinaryMInstruction : public MachineInstruction
@@ -142,7 +145,7 @@ public:
     StackMInstrcuton(MachineBlock* p, int op, 
                 std::vector<MachineOperand*> srcs,
                      MachineOperand* src1,
-                     MachineOperand* src2 = nullptr,
+                     MachineOperand* src2= nullptr,
                 int cond = MachineInstruction::NONE);
     void output();
 };

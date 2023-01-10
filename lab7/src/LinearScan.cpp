@@ -1,5 +1,6 @@
 #include <algorithm>
 #include "LinearScan.h"
+#include <algorithm>
 #include "MachineCode.h"
 #include "LiveVariableAnalysis.h"
 
@@ -79,48 +80,6 @@ void LinearScan::computeLiveIntervals()
         Interval *interval = new Interval({du_chain.first->getParent()->getNo(), t, false, 0, 0, {du_chain.first}, du_chain.second});
         intervals.push_back(interval);
     }
-    for (auto& interval : intervals) {
-        auto uses = interval->uses;
-        auto begin = interval->start;
-        auto end = interval->end;
-        for (auto block : func->getBlocks()) {
-            auto liveIn = block->getLiveIn();
-            auto liveOut = block->getLiveOut();
-            bool in = false;
-            bool out = false;
-            for (auto use : uses)
-                if (liveIn.count(use)) {
-                    in = true;
-                    break;
-                }
-            for (auto use : uses)
-                if (liveOut.count(use)) {
-                    out = true;
-                    break;
-                }
-            if (in && out) {
-                begin = std::min(begin, (*(block->begin()))->getNo());
-                end = std::max(end, (*(block->rbegin()))->getNo());
-            } else if (!in && out) {
-                for (auto i : block->getInsts())
-                    if (i->getDef().size() > 0 &&
-                        i->getDef()[0] == *(uses.begin())) {
-                        begin = std::min(begin, i->getNo());
-                        break;
-                    }
-                end = std::max(end, (*(block->rbegin()))->getNo());
-            } else if (in && !out) {
-                begin = std::min(begin, (*(block->begin()))->getNo());
-                int temp = 0;
-                for (auto use : uses)
-                    if (use->getParent()->getParent() == block)
-                        temp = std::max(temp, use->getParent()->getNo());
-                end = std::max(temp, end);
-            }
-        }
-        interval->start = begin;
-        interval->end = end;
-    }
     bool change;
     change = true;
     while (change)
@@ -162,8 +121,25 @@ void LinearScan::computeLiveIntervals()
 bool LinearScan::linearScanRegisterAllocation()
 {
     // Todo
-
-    return true;
+    bool success = true;
+    active.clear();
+    regs.clear();
+    for (int i = 4; i < 11; i++)
+        regs.push_back(i);
+    for (auto& i : intervals) {
+        expireOldIntervals(i);
+        if (regs.empty()) {
+            spillAtInterval(i);
+            // 不知道是不是该这样
+            success = false;
+        } else {
+            i->rreg = regs.front();
+            regs.erase(regs.begin());
+            active.push_back(i);
+            sort(active.begin(), active.end(), compareEnd);
+        }
+    }
+    return success;
 }
 
 void LinearScan::modifyCode()
@@ -190,20 +166,87 @@ void LinearScan::genSpillCode()
          * 1. insert ldr inst before the use of vreg
          * 2. insert str inst after the def of vreg
          */ 
+        interval->disp = -func->AllocSpace(4);
+        auto off = new MachineOperand(MachineOperand::IMM, interval->disp);
+        auto fp = new MachineOperand(MachineOperand::REG, 11);
+        for (auto use : interval->uses) {
+            auto temp = new MachineOperand(*use);
+            MachineOperand* operand = nullptr;
+            if (interval->disp > 255 || interval->disp < -255) {
+                operand = new MachineOperand(MachineOperand::VREG,
+                                             SymbolTable::getLabel());
+                auto inst1 = new LoadMInstruction(use->getParent()->getParent(),
+                                                  operand, off);
+                use->getParent()->insertBf(inst1);
+            }
+            if (operand) {
+                auto inst =
+                    new LoadMInstruction(use->getParent()->getParent(), temp,
+                                         fp, new MachineOperand(*operand));
+                use->getParent()->insertBf(inst);
+            } else {
+                auto inst = new LoadMInstruction(use->getParent()->getParent(),
+                                                 temp, fp, off);
+                use->getParent()->insertBf(inst);
+            }
+        }
+        for (auto def : interval->defs) {
+            auto temp = new MachineOperand(*def);
+            MachineOperand* operand = nullptr;
+            MachineInstruction *inst1 = nullptr, *inst = nullptr;
+            if (interval->disp > 255 || interval->disp < -255) {
+                operand = new MachineOperand(MachineOperand::VREG,
+                                             SymbolTable::getLabel());
+                inst1 = new LoadMInstruction(def->getParent()->getParent(),
+                                             operand, off);
+                def->getParent()->insertAft(inst1);
+            }
+            if (operand)
+                inst =
+                    new StoreMInstruction(def->getParent()->getParent(), temp,
+                                          fp, new MachineOperand(*operand));
+            else
+                inst = new StoreMInstruction(def->getParent()->getParent(),
+                                             temp, fp, off);
+            if (inst1)
+                inst1->insertAft(inst);
+            else
+                def->getParent()->insertAft(inst);
+        }
     }
 }
 
 void LinearScan::expireOldIntervals(Interval *interval)
 {
     // Todo
+    auto it = active.begin();
+    while (it != active.end()) {
+        if ((*it)->end >= interval->start)
+            return;
+        regs.push_back((*it)->rreg);
+        it = active.erase(find(active.begin(), active.end(), *it));
+        sort(regs.begin(), regs.end());
+    }
 }
 
 void LinearScan::spillAtInterval(Interval *interval)
 {
     // Todo
+    auto spill = active.back();
+    if (spill->end > interval->end) {
+        spill->spill = true;
+        interval->rreg = spill->rreg;
+        active.push_back(interval);
+        sort(active.begin(), active.end(), compareEnd);
+    } else {
+        interval->spill = true;
+    }
 }
 
 bool LinearScan::compareStart(Interval *a, Interval *b)
 {
     return a->start < b->start;
+}
+bool LinearScan::compareEnd(Interval* it1, Interval* it2) {
+    return it1->end < it2->end;
 }
