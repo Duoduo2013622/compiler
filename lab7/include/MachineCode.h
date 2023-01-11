@@ -142,11 +142,7 @@ class StackMInstrcuton : public MachineInstruction
 {
 public:
     enum opType { PUSH, POP };
-    StackMInstrcuton(MachineBlock* p, int op, 
-                std::vector<MachineOperand*> srcs,
-                     MachineOperand* src1,
-                     MachineOperand* src2= nullptr,
-                int cond = MachineInstruction::NONE);
+    StackMInstrcuton(MachineBlock* p, int op, std::vector<MachineOperand*> srcs, MachineOperand* src1, MachineOperand* src2= nullptr,int cond = MachineInstruction::NONE);
     void output();
 };
 
@@ -175,6 +171,7 @@ public:
     std::vector<MachineBlock*>& getSuccs() {return succ;};
     void output();
     void setCond(int cond) { Cond = cond; };
+    int getCond() const { return Cond; };
     MachineFunction* getParent() const { return parent; };
 };
 

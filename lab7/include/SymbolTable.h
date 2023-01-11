@@ -106,6 +106,7 @@ private:
     // You can add any field you need here.
 
     bool constant;
+    int paramCount;
 
 public:
     IdentifierSymbolEntry(Type *type, std::string name, int scope,bool sysy = false);
@@ -122,6 +123,7 @@ public:
     Operand* getAddr() {return addr;};
     int getLabel() const { return label; };
     void setLabel() { label = SymbolTable::getLabel(); };
+    int getParamCount() const { return paramCount; };
     // You can add any function you need here.
 };
 
@@ -148,12 +150,16 @@ class TemporarySymbolEntry : public SymbolEntry
 {
 private:
     int label;
+    int offset;
 public:
     TemporarySymbolEntry(Type *type, int label);
     virtual ~TemporarySymbolEntry() {};
     std::string toStr();
     int getLabel() const {return label;};
     // You can add any function you need here.
+
+    void setOffset(int offset) { this->offset = offset; };
+    int getOffset() { return this->offset; };
 };
 
 

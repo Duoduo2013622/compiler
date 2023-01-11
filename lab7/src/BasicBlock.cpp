@@ -98,3 +98,15 @@ BasicBlock::~BasicBlock()
         bb->removePred(this);
     parent->remove(this);
 }
+
+void BasicBlock::genMachineCode(AsmBuilder* builder) 
+{
+    auto cur_func = builder->getFunction();
+    auto cur_block = new MachineBlock(cur_func, no);
+    builder->setBlock(cur_block);
+    for (auto i = head->getNext(); i != head; i = i->getNext())
+    {
+        i->genMachineCode(builder);
+    }
+    cur_func->InsertBlock(cur_block);
+}

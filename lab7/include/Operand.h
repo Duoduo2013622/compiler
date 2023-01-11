@@ -20,6 +20,7 @@ private:
 public:
     Operand(SymbolEntry*se) :se(se){def = nullptr;};
     void setDef(Instruction *inst) {def = inst;};
+    Instruction* getDef() { return def; };
     void addUse(Instruction *inst) { uses.push_back(inst);};
     void removeUse(Instruction *inst);
     int usersNum() const {return uses.size();};
@@ -28,6 +29,7 @@ public:
     use_iterator use_end() {return uses.end();};
     Type* getType() {return se->getType();};
     std::string toStr() const;
+    SymbolEntry * getEntry() { return se; };
 };
 
 #endif
