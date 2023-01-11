@@ -92,6 +92,7 @@ public:
     | d        | LOCAL    |
     | e        | LOCAL +1 |
 */
+
 class IdentifierSymbolEntry : public SymbolEntry
 {
 private:
@@ -107,6 +108,7 @@ private:
 
     bool constant;
     int paramCount;
+    bool Zero;
 
 public:
     IdentifierSymbolEntry(Type *type, std::string name, int scope,bool sysy = false);
@@ -121,10 +123,13 @@ public:
     void setValue(int value);
     int getValue() const { return value; };
     Operand* getAddr() {return addr;};
+    // You can add any function you need here.
     int getLabel() const { return label; };
     void setLabel() { label = SymbolTable::getLabel(); };
     int getParamCount() const { return paramCount; };
-    // You can add any function you need here.
+    void setConst() { constant = true;};
+    bool getConst() const { return constant; };
+    bool isZero() const { return Zero; };
 };
 
 

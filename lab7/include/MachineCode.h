@@ -156,6 +156,7 @@ private:
     std::set<MachineOperand*> live_in;
     std::set<MachineOperand*> live_out;
     int Cond;
+    static int label;
 
 public:
     std::vector<MachineInstruction*>& getInsts() {return inst_list;};
@@ -173,6 +174,7 @@ public:
     void setCond(int cond) { Cond = cond; };
     int getCond() const { return Cond; };
     MachineFunction* getParent() const { return parent; };
+    int instListcount() const { return inst_list.size(); };
 };
 
 class MachineFunction
@@ -199,14 +201,7 @@ public:
     void InsertBlock(MachineBlock* block) { this->block_list.push_back(block); };
     void addSavedRegs(int regno) {saved_regs.insert(regno);};
     void output();
-    std::vector<MachineOperand*> CalleeSavedRegs(){
-        std::vector<MachineOperand*> regs;
-        for (auto it = saved_regs.begin(); it != saved_regs.end(); it++) {
-            auto reg = new MachineOperand(MachineOperand::REG, *it);
-            regs.push_back(reg);
-        }
-        return regs;
-    }
+    std::vector<MachineOperand*> CalleeSavedRegs();
     int ParamsNum() const { return paramscount; };
     MachineUnit* getParent() const { return parent; };
 
@@ -226,6 +221,7 @@ public:
     void InsertFunc(MachineFunction* func) { func_list.push_back(func);};
     void output();
     void insertGlobal(SymbolEntry*);
+    void printGlobal();
     int getSeq() const { return seq; };
 };
 

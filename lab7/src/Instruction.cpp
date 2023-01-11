@@ -349,6 +349,14 @@ void CallInstruction::output() const
     fprintf(yyout, ")\n");
 }
 
+CallInstruction::~CallInstruction() {
+    operands[0]->setDef(nullptr);
+    if (operands[0]->usersNum() == 0)
+        delete operands[0];
+    for (long unsigned int i = 1; i < operands.size(); i++)
+        operands[i]->removeUse(this);
+}
+
 ZextInstruction::ZextInstruction(Operand* dst, Operand* src,BasicBlock* insert_bb)
     : Instruction(ZEXT, insert_bb) {
     operands.push_back(dst);
@@ -361,6 +369,13 @@ void ZextInstruction::output() const {
     Operand* dst = operands[0];
     Operand* src = operands[1];
     fprintf(yyout, "  %s = zext %s %s to i32\n", dst->toStr().c_str(),src->getType()->toStr().c_str(), src->toStr().c_str());
+}
+
+ZextInstruction::~ZextInstruction() {
+    operands[0]->setDef(nullptr);
+    if (operands[0]->usersNum() == 0)
+        delete operands[0];
+    operands[1]->removeUse(this);
 }
 
 XorInstruction::XorInstruction(Operand* dst,Operand* src,BasicBlock* insert_bb)
@@ -377,6 +392,12 @@ void XorInstruction::output() const {
     fprintf(yyout, "  %s = xor %s %s, true\n", dst->toStr().c_str(),src->getType()->toStr().c_str(), src->toStr().c_str());
 }
 
+XorInstruction::~XorInstruction() {
+    operands[0]->setDef(nullptr);
+    if (operands[0]->usersNum() == 0)
+        delete operands[0];
+    operands[1]->removeUse(this);
+}
 
 MachineOperand* Instruction::genMachineOperand(Operand* ope) {
     auto se = ope->getEntry();
@@ -393,8 +414,7 @@ MachineOperand* Instruction::genMachineOperand(Operand* ope) {
         auto id_se = dynamic_cast<IdentifierSymbolEntry*>(se);
         if (id_se->isGlobal())
             mope = new MachineOperand(id_se->toStr().c_str());
-        else if (id_se->isParam()) {
-            // TODO: 
+        else if (id_se->isParam()) { 
             if (id_se->getParamCount() < 4)
                 mope = new MachineOperand(MachineOperand::REG,id_se->getParamCount());
             else

@@ -1,8 +1,8 @@
 #include <algorithm>
 #include "LinearScan.h"
-#include <algorithm>
 #include "MachineCode.h"
 #include "LiveVariableAnalysis.h"
+#include <iostream>
 
 LinearScan::LinearScan(MachineUnit *unit)
 {
@@ -173,20 +173,15 @@ void LinearScan::genSpillCode()
             auto temp = new MachineOperand(*use);
             MachineOperand* operand = nullptr;
             if (interval->disp > 255 || interval->disp < -255) {
-                operand = new MachineOperand(MachineOperand::VREG,
-                                             SymbolTable::getLabel());
-                auto inst1 = new LoadMInstruction(use->getParent()->getParent(),
-                                                  operand, off);
+                operand = new MachineOperand(MachineOperand::VREG,SymbolTable::getLabel());
+                auto inst1 = new LoadMInstruction(use->getParent()->getParent(),operand, off);
                 use->getParent()->insertBf(inst1);
             }
             if (operand) {
-                auto inst =
-                    new LoadMInstruction(use->getParent()->getParent(), temp,
-                                         fp, new MachineOperand(*operand));
+                auto inst =new LoadMInstruction(use->getParent()->getParent(), temp,fp, new MachineOperand(*operand));
                 use->getParent()->insertBf(inst);
             } else {
-                auto inst = new LoadMInstruction(use->getParent()->getParent(),
-                                                 temp, fp, off);
+                auto inst = new LoadMInstruction(use->getParent()->getParent(), temp, fp, off);
                 use->getParent()->insertBf(inst);
             }
         }
@@ -195,19 +190,14 @@ void LinearScan::genSpillCode()
             MachineOperand* operand = nullptr;
             MachineInstruction *inst1 = nullptr, *inst = nullptr;
             if (interval->disp > 255 || interval->disp < -255) {
-                operand = new MachineOperand(MachineOperand::VREG,
-                                             SymbolTable::getLabel());
-                inst1 = new LoadMInstruction(def->getParent()->getParent(),
-                                             operand, off);
+                operand = new MachineOperand(MachineOperand::VREG,SymbolTable::getLabel());
+                inst1 = new LoadMInstruction(def->getParent()->getParent(),operand, off);
                 def->getParent()->insertAft(inst1);
             }
             if (operand)
-                inst =
-                    new StoreMInstruction(def->getParent()->getParent(), temp,
-                                          fp, new MachineOperand(*operand));
+                inst = new StoreMInstruction(def->getParent()->getParent(), temp,  fp, new MachineOperand(*operand));
             else
-                inst = new StoreMInstruction(def->getParent()->getParent(),
-                                             temp, fp, off);
+                inst = new StoreMInstruction(def->getParent()->getParent(), temp, fp, off);
             if (inst1)
                 inst1->insertAft(inst);
             else

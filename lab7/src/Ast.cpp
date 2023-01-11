@@ -8,6 +8,7 @@
 #include "MachineCode.h"
 #include "Type.h"
 #include "Unit.h"
+#include <stack>
 extern Unit unit;
 extern MachineUnit mUnit;
 
@@ -51,6 +52,7 @@ std::vector<Instruction*> Node::merge(std::vector<Instruction*> &list1, std::vec
     res.insert(res.end(), list2.begin(), list2.end());
     return res;
 }
+
 
 CallExpr::CallExpr(SymbolEntry* se, ExprNode* param): ExprNode(se), param(param)
 {
@@ -161,6 +163,72 @@ void FunctionDef::genCode()
         }
     }
 }
+
+BinaryExpr::BinaryExpr(SymbolEntry *se, int op, ExprNode*expr1, ExprNode*expr2) : ExprNode(se), op(op), expr1(expr1), expr2(expr2){
+    //二元运算符类型检查
+    //这部分需要判断两个case：数值表达式计算中所有运算数类型是否正确 与 int到bool的隐式类型转换
+    dst = new Operand(se);
+    std::string op_str;
+    switch (op) {
+        case ADD: 
+            op_str = "+";
+            break;
+        case SUB:
+            op_str = "-";
+            break;
+        case MUL:
+            op_str = "*";
+            break;
+        case DIV:
+            op_str = "/";
+            break;
+        case MOD:
+            op_str = "%";
+            break;
+        case AND:
+            op_str = "&&";
+            break;
+        case OR:
+            op_str = "||";
+            break;
+        case LESS:
+            op_str = "<";
+            break;
+        case LESEQ:
+            op_str = "<=";
+            break;
+        case GRA:
+            op_str = ">";
+            break;
+        case GRAEQ:
+            op_str = ">=";
+            break;
+        case EQ:
+            op_str = "==";
+            break;
+        case NEQ:
+            op_str = "!=";
+            break;
+    }
+    if(expr1->getType()->isVoid() || expr2->getType()->isVoid()){ //不能为void类型
+        fprintf(stderr, "invalid operand of type \'void\' to binary \'opeartor%s\'\n", op_str.c_str());
+    }
+    if(op >= BinaryExpr::AND && op <= BinaryExpr::NEQ){ //是逻辑表达式
+        type = TypeSystem::boolType; //这种情况是bool类型
+        if(op == BinaryExpr::AND || op == BinaryExpr::OR ){//运算符为逻辑与和或时，做int至bool的隐式类型转换
+            if (expr1->getType()->isInt() && expr1->getType()->getSize() == 32) {
+                ITBExpr* temp = new ITBExpr(expr1);
+                this->expr1 = temp;
+            }
+            if (expr2->getType()->isInt() && expr2->getType()->getSize() == 32) {
+                ITBExpr* temp = new ITBExpr(expr2);
+                this->expr2 = temp;
+            }
+        }
+    }else{
+        type = TypeSystem::intType; //其余情况全是整型
+    }
+};
 
 void BinaryExpr::genCode()
 {
@@ -588,6 +656,8 @@ void IfStmt::typeCheck(Type* retType)
         thenStmt->typeCheck(retType);
 }
 
+
+
 void IfElseStmt::typeCheck(Type* retType)
 {
     if (thenStmt)
@@ -850,8 +920,7 @@ void Id::output(int level)
     name = symbolEntry->toStr();
     type = symbolEntry->getType()->toStr();
     scope = dynamic_cast<IdentifierSymbolEntry*>(symbolEntry)->getScope();
-    fprintf(yyout, "%*cId\tname: %s\tscope: %d\ttype: %s\n", level, ' ',
-            name.c_str(), scope, type.c_str());
+    fprintf(yyout, "%*cId\tname: %s\tscope: %d\ttype: %s\n", level, ' ',name.c_str(), scope, type.c_str());
 }
 
 void ITBExpr::output(int level) {

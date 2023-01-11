@@ -145,6 +145,7 @@ private:
 
 public:
     CallInstruction(Operand* dst,SymbolEntry* func,std::vector<Operand*> params,BasicBlock* insert_bb = nullptr);
+    ~CallInstruction();
     void output() const;
     void genMachineCode(AsmBuilder*);
 };
@@ -153,7 +154,7 @@ class ZextInstruction : public Instruction
 {
 public:
     ZextInstruction(Operand* dst,Operand* src,BasicBlock* insert_bb = nullptr);
-    //~ZextInstruction();
+    ~ZextInstruction();
     void output() const;
     void genMachineCode(AsmBuilder*);
 };
@@ -162,7 +163,7 @@ class XorInstruction : public Instruction
 {
 public:
     XorInstruction(Operand* dst, Operand* src, BasicBlock* insert_bb = nullptr);
-    //~XorInstruction();
+    ~XorInstruction();
     void output() const;
     void genMachineCode(AsmBuilder*);
 };

@@ -4,6 +4,7 @@
 
 extern FILE* yyout;
 
+int MachineBlock::label = 0;
 MachineOperand::MachineOperand(int tp, int val)
 {
     this->type = tp;
@@ -145,6 +146,7 @@ void BinaryMInstruction::output()
 {
     // TODO: 
     // Complete other instructions
+    //与中间代码生成类似
     switch (this->op)
     {
     case BinaryMInstruction::ADD:
@@ -229,25 +231,21 @@ void LoadMInstruction::output()
     fprintf(yyout, "\tldr ");
     this->def_list[0]->output();
     fprintf(yyout, ", ");
-
-    // Load immediate num, eg: ldr r1, =8
+    // ldr r1, =8
     if(this->use_list[0]->isImm())
     {
         fprintf(yyout, "=%d\n", this->use_list[0]->getVal());
         return;
     }
-
-    // Load address
+    // 加载地址
     if(this->use_list[0]->isReg()||this->use_list[0]->isVReg())
         fprintf(yyout, "[");
-
     this->use_list[0]->output();
     if( this->use_list.size() > 1 )
     {
         fprintf(yyout, ", ");
         this->use_list[1]->output();
     }
-
     if(this->use_list[0]->isReg()||this->use_list[0]->isVReg())
         fprintf(yyout, "]");
     fprintf(yyout, "\n");
@@ -442,15 +440,32 @@ MachineFunction::MachineFunction(MachineUnit* p, SymbolEntry* sym_ptr)
     this->parent = p; 
     this->sym_ptr = sym_ptr; 
     this->stack_size = 0;
-    this->paramscount =
-        ((FunctionType*)(sym_ptr->getType()))->getParamsSe().size();
+    this->paramscount =((FunctionType*)(sym_ptr->getType()))->getParamsSe().size();
 };
+std::vector<MachineOperand*> MachineFunction::CalleeSavedRegs() {
+    std::vector<MachineOperand*> regs;
+    for (auto it = saved_regs.begin(); it != saved_regs.end(); it++) {
+        auto reg = new MachineOperand(MachineOperand::REG, *it);
+        regs.push_back(reg);
+    }
+    return regs;
+}
+
 
 void MachineBlock::output()
 {
     fprintf(yyout, ".L%d:\n", this->no);
-    for(auto iter : inst_list)
+    int count = 0;
+    for(auto iter : inst_list){
         iter->output();
+        count++;
+            if (count % 500 == 0) {
+                fprintf(yyout, "\tb .B%d\n", label);
+                fprintf(yyout, ".LTORG\n");
+                parent->getParent()->printGlobal();
+                fprintf(yyout, ".B%d:\n", label++);
+            }
+    }
 }
 
 void MachineFunction::output()
@@ -470,15 +485,15 @@ void MachineFunction::output()
     //push {fp,lr} 保存 FP 寄存器及一些 CalleeSavedRegs
     // mov fp, sp 令 FP 寄存器指向新的栈底
     //sub sp, sp, #12 为局部变量分配栈内空间
-    auto fp = new MachineOperand(MachineOperand::REG, 1);
-    auto sp = new MachineOperand(MachineOperand::REG, 1);
-    auto lr = new MachineOperand(MachineOperand::REG, 1);
+    auto fp = new MachineOperand(MachineOperand::REG, 11);
+    auto sp = new MachineOperand(MachineOperand::REG, 13);
+    auto lr = new MachineOperand(MachineOperand::REG, 14);
     (new StackMInstrcuton(nullptr, StackMInstrcuton::PUSH,CalleeSavedRegs(), fp,lr))->output();
     (new MovMInstruction(nullptr, MovMInstruction::MOV, fp, sp))->output();
     int space = AllocSpace(0);
     auto spaceSize = new MachineOperand(MachineOperand::IMM, space);
     if (space < -255 || space > 255) {
-        auto r = new MachineOperand(MachineOperand::REG, 1);
+        auto r = new MachineOperand(MachineOperand::REG, 4);
         (new LoadMInstruction(nullptr, r, spaceSize))->output();
         (new BinaryMInstruction(nullptr, BinaryMInstruction::SUB, sp, sp, r))
             ->output();
@@ -486,8 +501,21 @@ void MachineFunction::output()
         (new BinaryMInstruction(nullptr, BinaryMInstruction::SUB, sp, sp, spaceSize))
             ->output();
     }
-    for(auto iter : block_list)
+    int count = 0;
+    for(auto iter : block_list){
         iter->output();
+        count += iter->instListcount();
+        if(count > 160){
+            fprintf(yyout, "\tb .F%d\n", parent->getSeq());
+            fprintf(yyout, ".LTORG\n");
+            parent->printGlobal();
+            fprintf(yyout, ".F%d:\n", parent->getSeq()-1);
+            count = 0;
+        }
+    }
+    fprintf(yyout, "\n");
+
+    
 }
 
 
@@ -499,6 +527,8 @@ void MachineUnit::PrintGlobalDecl()
     std::vector<int> zeroIdx;
     if (!globalList.empty())
         fprintf(yyout, "\t.data\n");
+
+    /*
     for (long unsigned int i = 0; i < globalList.size(); i++) {
         IdentifierSymbolEntry* symbolEntry = (IdentifierSymbolEntry*)globalList[i];
         fprintf(yyout, "\t.global %s\n", symbolEntry->toStr().c_str());
@@ -508,12 +538,59 @@ void MachineUnit::PrintGlobalDecl()
         fprintf(yyout, "\t.word %d\n", symbolEntry->getValue());
     }
 
+    */
+
+    for (long unsigned int i = 0; i < globalList.size(); i++) {
+        IdentifierSymbolEntry* se = (IdentifierSymbolEntry*)globalList[i];
+        if (se->getConst()) {
+            constIdx.push_back(i);
+        
+        } else if (se->isZero()) {
+            zeroIdx.push_back(i);
+        
+        } else {
+            fprintf(yyout, "\t.global %s\n", se->toStr().c_str());
+            fprintf(yyout, "\t.align 4\n");
+            fprintf(yyout, "\t.size %s, %d\n", se->toStr().c_str(),
+                    se->getType()->getSize() / 8);
+            fprintf(yyout, "%s:\n", se->toStr().c_str());
+            fprintf(yyout, "\t.word %d\n", se->getValue());
+        }
+    }
+    if (!constIdx.empty()) {
+        fprintf(yyout, "\t.section .rodata\n");
+        for (auto i : constIdx) {
+            IdentifierSymbolEntry* se = (IdentifierSymbolEntry*)globalList[i];
+            fprintf(yyout, "\t.global %s\n", se->toStr().c_str());
+            fprintf(yyout, "\t.align 4\n");
+            fprintf(yyout, "\t.size %s, %d\n", se->toStr().c_str(),
+                    se->getType()->getSize() / 8);
+            fprintf(yyout, "%s:\n", se->toStr().c_str());
+            fprintf(yyout, "\t.word %d\n", se->getValue());
+        }
+    }
+    
+    if (!zeroIdx.empty()) {
+        for (auto i : zeroIdx) {
+            IdentifierSymbolEntry* se = (IdentifierSymbolEntry*)globalList[i];
+        }
+    }
+    
+
 }
 
 void MachineUnit::insertGlobal(SymbolEntry* symbolEntry) {
     globalList.push_back(symbolEntry);
 }
 
+void MachineUnit::printGlobal(){
+    for (auto s : globalList) {
+        IdentifierSymbolEntry* se = (IdentifierSymbolEntry*)s;
+        fprintf(yyout, "addr_%s%d:\n", se->toStr().c_str(), seq);
+        fprintf(yyout, "\t.word %s\n", se->toStr().c_str());
+    }
+    seq++;
+}
 
 void MachineUnit::output()
 {
@@ -529,6 +606,7 @@ void MachineUnit::output()
     fprintf(yyout, "\t.text\n");
     for(auto iter : func_list)
         iter->output();
+    printGlobal();
 }
 
 void MachineInstruction::insertBf(MachineInstruction* inst) {

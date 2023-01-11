@@ -86,71 +86,7 @@ private:
     ExprNode *expr1, *expr2;
 public:
     enum {ADD, SUB,MUL,DIV,MOD, AND, OR, LESS,GRA,LESEQ,GRAEQ,EQ,NEQ};
-    BinaryExpr(SymbolEntry *se, int op, ExprNode*expr1, ExprNode*expr2) : ExprNode(se), op(op), expr1(expr1), expr2(expr2){
-    //二元运算符类型检查
-    //这部分需要判断两个case：数值表达式计算中所有运算数类型是否正确 与 int到bool的隐式类型转换
-    dst = new Operand(se);
-    std::string op_str;
-    switch (op) {
-        case ADD: 
-            op_str = "+";
-            break;
-        case SUB:
-            op_str = "-";
-            break;
-        case MUL:
-            op_str = "*";
-            break;
-        case DIV:
-            op_str = "/";
-            break;
-        case MOD:
-            op_str = "%";
-            break;
-        case AND:
-            op_str = "&&";
-            break;
-        case OR:
-            op_str = "||";
-            break;
-        case LESS:
-            op_str = "<";
-            break;
-        case LESEQ:
-            op_str = "<=";
-            break;
-        case GRA:
-            op_str = ">";
-            break;
-        case GRAEQ:
-            op_str = ">=";
-            break;
-        case EQ:
-            op_str = "==";
-            break;
-        case NEQ:
-            op_str = "!=";
-            break;
-    }
-    if(expr1->getType()->isVoid() || expr2->getType()->isVoid()){ //不能为void类型
-        fprintf(stderr, "invalid operand of type \'void\' to binary \'opeartor%s\'\n", op_str.c_str());
-    }
-    if(op >= BinaryExpr::AND && op <= BinaryExpr::NEQ){ //是逻辑表达式
-        type = TypeSystem::boolType; //这种情况是bool类型
-        if(op == BinaryExpr::AND || op == BinaryExpr::OR ){//运算符为逻辑与和或时，做int至bool的隐式类型转换
-            if (expr1->getType()->isInt() && expr1->getType()->getSize() == 32) {
-                ITBExpr* temp = new ITBExpr(expr1);
-                this->expr1 = temp;
-            }
-            if (expr2->getType()->isInt() && expr2->getType()->getSize() == 32) {
-                ITBExpr* temp = new ITBExpr(expr2);
-                this->expr2 = temp;
-            }
-        }
-    }else{
-        type = TypeSystem::intType; //其余情况全是整型
-    }
-    };
+    BinaryExpr(SymbolEntry* se, int op, ExprNode* expr1, ExprNode* expr2);
     void output(int level);
     int getValue();
     void typeCheck(Type* retType = nullptr);
@@ -174,10 +110,24 @@ class UnaryExpr : public ExprNode {
             //!，输出为bool类型
             type = TypeSystem::boolType;
             dst = new Operand(se);
+            if (expr->isUnaryExpr()) {
+            UnaryExpr* ue = (UnaryExpr*)expr;
+            if (ue->op == UnaryExpr::NOT) {
+                if (ue->getType() == TypeSystem::intType)
+                    ue->setType(TypeSystem::boolType);
+                // type = TypeSystem::intType;
+            }
+        }
         }else if(op==UnaryExpr::SUB){
             //－，输出为int类型
             type = TypeSystem::intType;
             dst = new Operand(se);
+            if (expr->isUnaryExpr()) {
+            UnaryExpr* ue = (UnaryExpr*)expr;
+            if (ue->op == UnaryExpr::NOT)
+                if (ue->getType() == TypeSystem::intType)
+                    ue->setType(TypeSystem::boolType);
+        }
         }
     };
     void output(int level);
@@ -435,6 +385,7 @@ class ExprStmt : public StmtNode {
     void typeCheck(Type* retType = nullptr);
     void genCode();
 };
+
 
 class FunctionDef : public StmtNode
 {

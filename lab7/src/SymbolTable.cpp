@@ -47,7 +47,10 @@ IdentifierSymbolEntry::IdentifierSymbolEntry(Type *type, std::string name, int s
     this->initial = false;
     addr = nullptr;
     this->label = -1;
+    this->constant = false;
 }
+
+
 void IdentifierSymbolEntry::setValue(int value) {
     if (((IntType*)(this->getType()))->isConst()) {
         if (!initial) {

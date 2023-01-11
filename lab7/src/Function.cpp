@@ -77,7 +77,6 @@ void Function::genMachineCode(AsmBuilder* builder)
         block->genMachineCode(builder);
         map[block] = builder->getBlock();
     }
-    // Add pred and succ for every block
     for(auto block : block_list)
     {
         auto mblock = map[block];

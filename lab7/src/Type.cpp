@@ -42,6 +42,7 @@ std::string FunctionType::toStr()
     return buffer.str();
 }
 
+
 std::string PointerType::toStr()
 {
     std::ostringstream buffer;
