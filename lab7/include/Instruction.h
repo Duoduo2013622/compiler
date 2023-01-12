@@ -3,6 +3,7 @@
 
 #include "Operand.h"
 #include <vector>
+#include <sstream>
 #include <map>
 #include "AsmBuilder.h"
 

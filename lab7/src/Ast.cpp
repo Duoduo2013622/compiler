@@ -9,6 +9,7 @@
 #include "Type.h"
 #include "Unit.h"
 #include <stack>
+
 extern Unit unit;
 extern MachineUnit mUnit;
 
@@ -95,7 +96,8 @@ CallExpr::CallExpr(SymbolEntry* se, ExprNode* param): ExprNode(se), param(param)
             fprintf(stderr, "too many arguments to function %s %s\n",symbolEntry->toStr().c_str(), type->toStr().c_str());
         }
     }
-    if (((IdentifierSymbolEntry*)se)->isSysy())unit.insertDeclare(se);
+    if (((IdentifierSymbolEntry*)se)->isSysy())
+        unit.insertDeclare(se);
 }
 
 void Ast::genCode(Unit *unit)
@@ -273,7 +275,7 @@ void BinaryExpr::genCode()
             src2 = dst;
         }
 
-        int opcode;
+        int opcode = -1;
         switch (op)
         {
             case LESS:
@@ -986,6 +988,17 @@ void DeclExpr::output(int level) {
         temp = temp->getNext();
     }
 }
+
+void DeclExpr::addExpr(ExprNode* expr) {
+    if (this->expr == nullptr) {
+        dcnt++;
+        this->expr = expr;
+    } else {
+        dcnt++;
+        this->expr->setNext(expr);
+    }
+}
+
 
 void CompoundStmt::output(int level)
 {

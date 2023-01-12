@@ -111,7 +111,7 @@ private:
     bool Zero;
 
 public:
-    IdentifierSymbolEntry(Type *type, std::string name, int scope,bool sysy = false);
+    IdentifierSymbolEntry(Type *type, std::string name, int scope,int paramCount=-1 , bool sysy = false);
     virtual ~IdentifierSymbolEntry() {};
     std::string toStr();
     bool isSysy() const { return sysy; };

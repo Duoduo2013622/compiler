@@ -402,22 +402,22 @@ XorInstruction::~XorInstruction() {
 MachineOperand* Instruction::genMachineOperand(Operand* ope) {
     auto se = ope->getEntry();
     MachineOperand* mope = nullptr;
-    if (se->isConstant())
+    if (se->isConstant()) //常数
         mope = new MachineOperand(
             MachineOperand::IMM,
             dynamic_cast<ConstantSymbolEntry*>(se)->getValue());
-    else if (se->isTemporary())
+    else if (se->isTemporary()) //临时变量
         mope = new MachineOperand(
             MachineOperand::VREG,
             dynamic_cast<TemporarySymbolEntry*>(se)->getLabel());
-    else if (se->isVariable()) {
+    else if (se->isVariable()) {  //变量
         auto id_se = dynamic_cast<IdentifierSymbolEntry*>(se);
-        if (id_se->isGlobal())
+        if (id_se->isGlobal())  //全局变量
             mope = new MachineOperand(id_se->toStr().c_str());
-        else if (id_se->isParam()) { 
+        else if (id_se->isParam()) { //含参函数，使用 R0-R3 寄存器传递参数
             if (id_se->getParamCount() < 4)
                 mope = new MachineOperand(MachineOperand::REG,id_se->getParamCount());
-            else
+            else//参数个数大于四个
                 mope = new MachineOperand(MachineOperand::REG, 3);
         } else
             exit(0);
@@ -733,7 +733,7 @@ void CallInstruction::genMachineCode(AsmBuilder* builder) {
             cur_inst = new MovMInstruction(cur_block, MovMInstruction::MOV,operand, src);
         cur_block->InsertInst(cur_inst);
     }
-    
+    //参数个数大于四个还生成 PUSH 指令来传递参数
     for (int i = operands.size() - 1; i > 4; i--) {
         operand = genMachineOperand(operands[i]);
         if (operand->isImm()) {

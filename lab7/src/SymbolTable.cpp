@@ -41,7 +41,7 @@ std::string ConstantSymbolEntry::toStr()
     return buffer.str();
 }
 
-IdentifierSymbolEntry::IdentifierSymbolEntry(Type *type, std::string name, int scope, bool sysy ) : SymbolEntry(type, SymbolEntry::VARIABLE), name(name), sysy(sysy)
+IdentifierSymbolEntry::IdentifierSymbolEntry(Type *type, std::string name, int scope,int paramCount, bool sysy ) : SymbolEntry(type, SymbolEntry::VARIABLE), name(name), sysy(sysy),paramCount(paramCount)
 {
     this->scope = scope;
     this->initial = false;
