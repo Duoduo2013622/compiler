@@ -77,6 +77,8 @@ public:
     MachineBlock* getParent() const { return parent; };
     void insertBf(MachineInstruction*);
     void insertAft(MachineInstruction*);
+
+    bool isBranch() const { return type == BRANCH && op == 2; };
 };
 
 class BinaryMInstruction : public MachineInstruction

@@ -496,11 +496,42 @@ void DeclStmt::genCode()//声明语句，包括全局、局部以及参数
         }
         se->setAddr(addr);                                          // set the addr operand in symbol entry so that we can use it in subsequent code generation.
         if (expr) {
-            
+            if (expr->isDeclExpr()) {
+                Operand* init = nullptr;
+                BasicBlock* bb = builder->getInsertBB();
+                ExprNode* temp = expr;
+                std::stack<ExprNode*> DeclExprStack;
+                std::vector<int> DeclExprIdx;
+                DeclExprIdx.push_back(0);
+                while (temp) {
+                    if (temp->isDeclExpr()) {
+                        DeclExprStack.push(temp);
+                        DeclExprIdx.push_back(0);
+                        temp = ((DeclExpr*)temp)->getExpr();
+                        continue;
+                    } 
+                    while (true) {
+                        if (temp->getNext()) {
+                            temp = (ExprNode*)(temp->getNext());
+                            DeclExprIdx[DeclExprIdx.size() - 1]++;
+                            break;
+                        } else {
+                            temp = DeclExprStack.top();
+                            DeclExprStack.pop();
+                            DeclExprIdx.pop_back();
+                            if (DeclExprStack.empty())
+                                break;
+                        }
+                    }
+                    if (DeclExprStack.empty())
+                        break;
+                }
+            } else {
                 BasicBlock* bb = builder->getInsertBB();
                 expr->genCode();
                 Operand* src = expr->getOperand();
                 new StoreInstruction(addr, src, bb);
+            }
             
         }
         if (se->isParam()) {
@@ -581,6 +612,22 @@ void ReturnStmt::genCode()
     }
     new RetInstruction(src, bb);
 }
+
+
+AssignStmt::AssignStmt(ExprNode* lval, ExprNode* expr): lval(lval), expr(expr) {
+    //错误的赋值，包括对常量赋值，以及对int型变量赋void值
+    Type* type = ((Id*)lval)->getType();
+    SymbolEntry* se = lval->getSymbolEntry();
+    if (type->isInt()) {//对常量赋值
+        if (((IntType*)type)->isConst()) {
+            fprintf(stderr,"cannot assign to variable \'%s\' with const-qualified ""type \'%s\'\n",((IdentifierSymbolEntry*)se)->toStr().c_str(),type->toStr().c_str());
+        }
+    } else if (type->isInt() && !expr->getType()->isInt()){//对int型变量赋void值
+        fprintf(stderr,"cannot initialize a variable of type \'int\' with an rvalue " "of type \'%s\'\n", expr->getType()->toStr().c_str());
+    }
+
+}
+
 
 void AssignStmt::genCode()
 {

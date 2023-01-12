@@ -46,7 +46,7 @@ public:
     SymbolEntry* lookup(std::string name);
     SymbolTable* getPrev() {return prev;};
     int getLevel() {return level;};
-    static int getLabel() {return counter++;};
+    static int getLabel() {return counter++;}; //函数调用的级数
 };
 
 /*  
@@ -129,6 +129,7 @@ public:
     int getParamCount() const { return paramCount; };
     void setConst() { constant = true;};
     bool getConst() const { return constant; };
+    void setZero() { Zero = true; };
     bool isZero() const { return Zero; };
 };
 

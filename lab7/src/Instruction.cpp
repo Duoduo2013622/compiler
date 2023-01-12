@@ -324,7 +324,7 @@ void StoreInstruction::output() const
 
 
 CallInstruction::CallInstruction(Operand* dst,SymbolEntry* func,std::vector<Operand*> params,BasicBlock* insert_bb)
-    : Instruction(CALL, insert_bb), func(func) {
+    : Instruction(CALL, insert_bb), func(func) ,dst(dst){
     operands.push_back(dst);
     if (dst)
         dst->setDef(this);
@@ -453,8 +453,7 @@ void AllocaInstruction::genMachineCode(AsmBuilder* builder) {
     if (size < 0)
         size = 4;
     int offset = cur_func->AllocSpace(size);
-    dynamic_cast<TemporarySymbolEntry*>(operands[0]->getEntry())
-        ->setOffset(-offset);
+    dynamic_cast<TemporarySymbolEntry*>(operands[0]->getEntry())->setOffset(-offset);
 }
 
 
@@ -463,8 +462,7 @@ void LoadInstruction::genMachineCode(AsmBuilder* builder) {
     auto cur_block = builder->getBlock();
     MachineInstruction* cur_inst = nullptr;
     // Load global operand
-    if (operands[1]->getEntry()->isVariable() &&
-        dynamic_cast<IdentifierSymbolEntry*>(operands[1]->getEntry())->isGlobal()) {
+    if (operands[1]->getEntry()->isVariable() &&dynamic_cast<IdentifierSymbolEntry*>(operands[1]->getEntry())->isGlobal()) {
         auto dst = genMachineOperand(operands[0]);
         auto internal_reg1 = genMachineVReg();
         auto internal_reg2 = new MachineOperand(*internal_reg1);
@@ -500,6 +498,7 @@ void LoadInstruction::genMachineCode(AsmBuilder* builder) {
         cur_block->InsertInst(cur_inst);
     }
 }
+
 
 
 
@@ -734,6 +733,7 @@ void CallInstruction::genMachineCode(AsmBuilder* builder) {
             cur_inst = new MovMInstruction(cur_block, MovMInstruction::MOV,operand, src);
         cur_block->InsertInst(cur_inst);
     }
+    
     for (int i = operands.size() - 1; i > 4; i--) {
         operand = genMachineOperand(operands[i]);
         if (operand->isImm()) {
@@ -749,6 +749,9 @@ void CallInstruction::genMachineCode(AsmBuilder* builder) {
         cur_inst = new StackMInstrcuton(cur_block, StackMInstrcuton::PUSH, vec,operand);
         cur_block->InsertInst(cur_inst);
     }
+    
+
+    //调用函数 链接跳转
     auto label = new MachineOperand(func->toStr().c_str());
     cur_inst = new BranchMInstruction(cur_block, BranchMInstruction::BL, label);
     cur_block->InsertInst(cur_inst);
@@ -765,4 +768,3 @@ void CallInstruction::genMachineCode(AsmBuilder* builder) {
         cur_block->InsertInst(cur_inst);
     }
 }
-

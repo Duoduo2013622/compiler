@@ -56,6 +56,4 @@ Unit::~Unit()
 {
     for(auto &func:func_list)
         delete func;
-    for (auto& se : global_list)
-        delete se;
 }

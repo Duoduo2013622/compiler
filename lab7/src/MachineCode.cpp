@@ -87,10 +87,12 @@ void MachineOperand::output()
         PrintReg();
         break;
     case LABEL:
-        if (this->label.substr(0, 2) == ".L")
+        if (this->label.substr(0, 2) == ".L")  //同函数
             fprintf(yyout, "%s", this->label.c_str());
+        else if (this->label.substr(0, 1) == "@") //函数
+            fprintf(yyout, "%s", this->label.c_str() + 1);
         else
-            fprintf(yyout, "addr_%s", this->label.c_str());
+            fprintf(yyout, "addr_%s%d", this->label.c_str(), parent->getParent()->getParent()->getParent()->getSeq());
     default:
         break;
     }
@@ -312,6 +314,7 @@ void MovMInstruction::output()
     // TODO
     //mov r0, r5
     fprintf(yyout, "\tmov");
+    PrintCond();
     fprintf(yyout, " ");
     this->def_list[0]->output();
     fprintf(yyout, ", ");
@@ -319,9 +322,7 @@ void MovMInstruction::output()
     fprintf(yyout, "\n");
 }
 
-BranchMInstruction::BranchMInstruction(MachineBlock* p, int op, 
-    MachineOperand* dst, 
-    int cond)
+BranchMInstruction::BranchMInstruction(MachineBlock* p, int op, MachineOperand* dst, int cond)
 {
     // TODO
     this->parent = p;
@@ -338,23 +339,26 @@ void BranchMInstruction::output()
 {
     // TODO
     switch (op) {
-        //b .L23 直接调转
+        //b{条件} .L23 直接调转
         case B:
             fprintf(yyout, "\tb");
+            PrintCond();
             fprintf(yyout, " ");
             this->use_list[0]->output();
             fprintf(yyout, "\n");
             break;
-        //bx lr 带状态切换的跳转。
+        //bx{条件} lr 带状态切换的跳转。
         case BX:
             fprintf(yyout, "\tbx");
+            PrintCond();
             fprintf(yyout, " ");
             this->use_list[0]->output();
             fprintf(yyout, "\n");
             break;
-        //bl .L21 带链接的跳转。 
+        //bl{条件} .L21 带链接的跳转。 
         case BL:
             fprintf(yyout, "\tbl");
+            PrintCond();
             fprintf(yyout, " ");
             this->use_list[0]->output();
             fprintf(yyout, "\n");
@@ -442,6 +446,7 @@ MachineFunction::MachineFunction(MachineUnit* p, SymbolEntry* sym_ptr)
     this->stack_size = 0;
     this->paramscount =((FunctionType*)(sym_ptr->getType()))->getParamsSe().size();
 };
+
 std::vector<MachineOperand*> MachineFunction::CalleeSavedRegs() {
     std::vector<MachineOperand*> regs;
     for (auto it = saved_regs.begin(); it != saved_regs.end(); it++) {
@@ -454,17 +459,29 @@ std::vector<MachineOperand*> MachineFunction::CalleeSavedRegs() {
 
 void MachineBlock::output()
 {
-    fprintf(yyout, ".L%d:\n", this->no);
+    bool first = true;
+    int offset = (parent->CalleeSavedRegs().size() + 2) * 4;
+    int num = parent->ParamsNum();
     int count = 0;
-    for(auto iter : inst_list){
-        iter->output();
-        count++;
+    if (!inst_list.empty()) {
+        fprintf(yyout, ".L%d:\n", this->no);
+        for (auto it = inst_list.begin(); it != inst_list.end(); it++) {
+            if ((*it)->isBranch()) {
+                auto fp = new MachineOperand(MachineOperand::REG, 11);
+                auto lr = new MachineOperand(MachineOperand::REG, 14);
+                auto cur_inst =
+                    new StackMInstrcuton(this, StackMInstrcuton::POP,parent->CalleeSavedRegs(), fp, lr);
+                cur_inst->output();
+            }
+            (*it)->output();
+            count++;
             if (count % 500 == 0) {
                 fprintf(yyout, "\tb .B%d\n", label);
                 fprintf(yyout, ".LTORG\n");
                 parent->getParent()->printGlobal();
                 fprintf(yyout, ".B%d:\n", label++);
             }
+        }
     }
 }
 

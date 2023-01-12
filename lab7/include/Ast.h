@@ -358,18 +358,7 @@ private:
     ExprNode *lval;
     ExprNode *expr;
 public:
-    AssignStmt(ExprNode *lval, ExprNode *expr) : lval(lval), expr(expr) {
-        //错误的赋值，包括对常量赋值，以及对int型变量赋void值
-        Type* type = ((Id*)lval)->getType();
-        if(type->isInt()){//对常量赋值
-            if (((IntType*)type)->isConst()) {
-                fprintf(stderr,"Expression must be a modifiable lvalue \n");
-            }
-        }
-        else if(type->isInt() && !expr->getType()->isInt()){ //对int型变量赋void值
-            fprintf(stderr,"cannot initialize a variable of type \'int\' with an rvalue of type \'%s\'\n", expr->getType()->toStr().c_str());
-        }
-    };
+    AssignStmt(ExprNode* lval, ExprNode* expr);
     void output(int level);
     void typeCheck(Type* retType = nullptr);
     void genCode();
