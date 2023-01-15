@@ -253,9 +253,7 @@ void LoadMInstruction::output()
     fprintf(yyout, "\n");
 }
 
-StoreMInstruction::StoreMInstruction(MachineBlock* p,
-    MachineOperand* src1, MachineOperand* src2, MachineOperand* src3, 
-    int cond)
+StoreMInstruction::StoreMInstruction(MachineBlock* p,MachineOperand* src1, MachineOperand* src2, MachineOperand* src3, int cond)
 {
     // TODO
     // str 源寄存器 存储地址
@@ -473,6 +471,38 @@ void MachineBlock::output()
                     new StackMInstrcuton(this, StackMInstrcuton::POP,parent->CalleeSavedRegs(), fp, lr);
                 cur_inst->output();
             }
+            if (num > 4 && (*it)->isStore()) {
+                MachineOperand* operand = (*it)->getUse()[0];
+                if (operand->isReg() && operand->getReg() == 3) {
+                    if (first) {
+                        first = false;
+                    } else {
+                        auto fp = new MachineOperand(MachineOperand::REG, 11);
+                        auto r3 = new MachineOperand(MachineOperand::REG, 3);
+                        auto off =
+                            new MachineOperand(MachineOperand::IMM, offset);
+                        offset += 4;
+                        auto cur_inst = new LoadMInstruction(this, r3, fp, off);
+                        cur_inst->output();
+                    }
+                }
+            }
+            if ((*it)->isAdd()) {
+                auto dst = (*it)->getDef()[0];
+                auto src1 = (*it)->getUse()[0];
+                if (dst->isReg() && dst->getReg() == 13 && src1->isReg() &&
+                    src1->getReg() == 13 && (*(it + 1))->isBranch()) {
+                    int size = parent->AllocSpace(0);
+                    if (size < -255 || size > 255) {
+                        auto r1 = new MachineOperand(MachineOperand::REG, 1);
+                        auto off =
+                            new MachineOperand(MachineOperand::IMM, size);
+                        (new LoadMInstruction(nullptr, r1, off))->output();
+                        (*it)->getUse()[1]->setReg(1);
+                    } else
+                        (*it)->getUse()[1]->setVal(size);
+                }
+            }
             (*it)->output();
             count++;
             if (count % 500 == 0) {
@@ -487,10 +517,9 @@ void MachineBlock::output()
 
 void MachineFunction::output()
 {
-    const char *func_name = this->sym_ptr->toStr().c_str() + 1;
-    fprintf(yyout, "\t.global %s\n", func_name);
-    fprintf(yyout, "\t.type %s , %%function\n", func_name);
-    fprintf(yyout, "%s:\n", func_name);
+    fprintf(yyout, "\t.global %s\n", this->sym_ptr->toStr().c_str() + 1);
+    fprintf(yyout, "\t.type %s , %%function\n",this->sym_ptr->toStr().c_str() + 1);
+    fprintf(yyout, "%s:\n", this->sym_ptr->toStr().c_str() + 1);
     // TODO
     /* Hint:
     *  1. Save fp
@@ -571,7 +600,15 @@ void MachineUnit::PrintGlobalDecl()
             fprintf(yyout, "\t.size %s, %d\n", se->toStr().c_str(),
                     se->getType()->getSize() / 8);
             fprintf(yyout, "%s:\n", se->toStr().c_str());
-            fprintf(yyout, "\t.word %d\n", se->getValue());
+            if (!se->getType()->isArray()) {
+                fprintf(yyout, "\t.word %d\n", se->getValue());
+            } else {
+                int n = se->getType()->getSize() / 32;
+                int* p = se->getArrayValue();
+                for (int i = 0; i < n; i++) {
+                    fprintf(yyout, "\t.word %d\n", p[i]);
+                }
+            }
         }
     }
     if (!constIdx.empty()) {
@@ -583,13 +620,25 @@ void MachineUnit::PrintGlobalDecl()
             fprintf(yyout, "\t.size %s, %d\n", se->toStr().c_str(),
                     se->getType()->getSize() / 8);
             fprintf(yyout, "%s:\n", se->toStr().c_str());
-            fprintf(yyout, "\t.word %d\n", se->getValue());
+            if (!se->getType()->isArray()) {
+                fprintf(yyout, "\t.word %d\n", se->getValue());
+            } else {
+                int n = se->getType()->getSize() / 32;
+                int* p = se->getArrayValue();
+                for (int i = 0; i < n; i++) {
+                    fprintf(yyout, "\t.word %d\n", p[i]);
+                }
+            }
         }
     }
     
     if (!zeroIdx.empty()) {
         for (auto i : zeroIdx) {
             IdentifierSymbolEntry* se = (IdentifierSymbolEntry*)globalList[i];
+            if (se->getType()->isArray()) {
+                fprintf(yyout, "\t.comm %s, %d, 4\n", se->toStr().c_str(),
+                        se->getType()->getSize() / 8);
+            }
         }
     }
     

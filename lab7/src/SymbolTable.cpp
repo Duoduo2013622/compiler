@@ -33,11 +33,29 @@ ConstantSymbolEntry::ConstantSymbolEntry(Type *type, int value) : SymbolEntry(ty
 {
     this->value = value;
 }
+ConstantSymbolEntry::ConstantSymbolEntry(Type* type, std::string value)
+    : SymbolEntry(type, SymbolEntry::CONSTANT) {
+    assert(type->isString());
+    this->strValue = value;
+}
+
+ConstantSymbolEntry::ConstantSymbolEntry(Type* type)
+    : SymbolEntry(type, SymbolEntry::CONSTANT) {
+    // do nothing
+}
+
+std::string ConstantSymbolEntry::getStrValue() const {
+    assert(type->isString());
+    return strValue;
+}
 
 std::string ConstantSymbolEntry::toStr()
 {
     std::ostringstream buffer;
-    buffer << value;
+    if (type->isInt())
+        buffer << value;
+    else if (type->isString())
+        buffer << strValue;
     return buffer.str();
 }
 
@@ -48,6 +66,7 @@ IdentifierSymbolEntry::IdentifierSymbolEntry(Type *type, std::string name, int s
     addr = nullptr;
     this->label = -1;
     this->constant = false;
+    this->Zero = false;
 }
 
 
@@ -59,6 +78,17 @@ void IdentifierSymbolEntry::setValue(int value) {
         } 
     } else {
         this->value = value;
+    }
+}
+
+void IdentifierSymbolEntry::setArrayValue(int* arrayValue) {
+    if (((IntType*)(this->getType()))->isConst()) {
+        if (!initial) {
+            this->arrayValue = arrayValue;
+            initial = true;
+        } 
+    } else {
+        this->arrayValue = arrayValue;
     }
 }
 

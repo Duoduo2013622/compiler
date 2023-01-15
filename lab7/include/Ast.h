@@ -52,14 +52,18 @@ protected:
 public:
     ExprNode(SymbolEntry *symbolEntry , int exprType=EXPR) :  exprType(exprType) , symbolEntry(symbolEntry){};
     Operand* getOperand() {return dst;};
+    void output(int level);
     SymbolEntry* getSymPtr() {return symbolEntry;};
-    virtual int getValue() { return 0; };
+    virtual int getValue() { return -1; };
     virtual Type* getType() { return type; };
     bool isExpr() const { return exprType == EXPR; };
     bool isDeclExpr() const { return exprType == DECLEXPR; };
     bool isITBExpr() const { return exprType == ITBEXPR; };
     bool isUnaryExpr() const { return exprType == UEXPR; };
+    void typeCheck(Type* retType = nullptr) { return; };
     SymbolEntry* getSymbolEntry() { return symbolEntry; };
+    void genCode();
+    Type* getOriginType() { return type; };
 };
 
 
@@ -134,6 +138,7 @@ class UnaryExpr : public ExprNode {
     int getValue();
     void typeCheck(Type* retType = nullptr);
     void genCode();
+    int getOp() const { return op; };
     void setType(Type* type) { this->type = type; }
 };
 
@@ -163,12 +168,20 @@ public:
 
 class Id : public ExprNode
 {
+private:
+    ExprNode* arrIdx;
+    bool left = false;
 public:
-    Id(SymbolEntry *se) : ExprNode(se){
+    Id(SymbolEntry *se, ExprNode* arrIdx = nullptr) : ExprNode(se), arrIdx(arrIdx){
         if(se){
-        type = se->getType();
-        SymbolEntry *temp = new TemporarySymbolEntry(se->getType(), SymbolTable::getLabel()); 
-        dst = new Operand(temp);
+            type = se->getType();
+            if (type->isInt()) {
+                SymbolEntry* temp = new TemporarySymbolEntry(TypeSystem::intType, SymbolTable::getLabel());
+                dst = new Operand(temp);
+            } else if (type->isArray()) {
+                SymbolEntry* temp = new TemporarySymbolEntry(new PointerType(((ArrayType*)type)->getElementType()),SymbolTable::getLabel());
+                dst = new Operand(temp);
+            }
         }
     };
     void output(int level);
@@ -177,6 +190,9 @@ public:
     void typeCheck(Type* retType = nullptr);
     void genCode();
     Type* getType();
+    ExprNode* getArrIdx() { return arrIdx; };
+    bool isLeft() const { return left; };
+    void setLeft() { left = true; }
 };
 
 
@@ -200,8 +216,18 @@ class DeclExpr : public ExprNode { //构建声明链
     void genCode();
 };
 
-class StmtNode : public Node
-{};
+class StmtNode : public Node {
+   private:
+    int kind;
+
+   protected:
+    enum { IF, IFELSE, WHILE, COMPOUND, RETURN };
+
+   public:
+    StmtNode(int kind = -1) : kind(kind){};
+    bool isIf() const { return kind == IF; };
+    //virtual bool typeCheck(Type* retType = nullptr) = 0;
+};
 
 class CompoundStmt : public StmtNode
 {
@@ -234,6 +260,8 @@ public:
     DeclStmt(Id *id , ExprNode* expr = nullptr) : id(id),expr(expr){
         if (expr) {
             this->expr = expr;
+            if (expr->isDeclExpr())
+                ((DeclExpr*)(this->expr))->fill();
         }
     };
     void output(int level);

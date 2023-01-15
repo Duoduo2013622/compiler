@@ -62,6 +62,7 @@ DECI ([1-9][0-9]*|0)
 OCT (0[0-7]+)
 HEX (0[Xx][[0-9a-fA-F]+)
 ID [[:alpha:]_][[:alpha:][:digit:]_]*
+STRING \".*\"
 EOL (\r\n|\n)
 WHITE [\t ]
 
@@ -523,6 +524,7 @@ commentlineend \n
     #endif
 }
 
+
 "putint" {
     char *lexeme;
     lexeme = new char[strlen(yytext) + 1];
@@ -586,7 +588,60 @@ commentlineend \n
     st->install(yytext, se);
     return ID;
 }
+"putarray" {
+    char *lexeme;
+    lexeme = new char[strlen(yytext) + 1];
+    strcpy(lexeme, yytext);
+    yylval.strtype = lexeme;
+    std::vector<Type*> vec;
+    std::vector<SymbolEntry*> vec1;
+    vec.push_back(TypeSystem::intType);
+    ArrayType* arr = new ArrayType(TypeSystem::intType, -1);
+    vec.push_back(arr);
+    Type* funcType = new FunctionType(TypeSystem::voidType, vec,vec1);
+    SymbolTable* st = identifiers;
+    while(st->getPrev())
+        st = st->getPrev();
+    SymbolEntry* se = new IdentifierSymbolEntry(funcType, yytext, st->getLevel(), -1, true);
+    st->install(yytext, se);
+    return ID;
+}
 
+"getarray" {
+    char *lexeme;
+    lexeme = new char[strlen(yytext) + 1];
+    strcpy(lexeme, yytext);
+    yylval.strtype = lexeme;
+    std::vector<Type*> vec;
+    std::vector<SymbolEntry*> vec1;
+    ArrayType* arr = new ArrayType(TypeSystem::intType, -1);
+    vec.push_back(arr);
+    Type* funcType = new FunctionType(TypeSystem::intType, vec,vec1);
+    SymbolTable* st = identifiers;
+    while(st->getPrev())
+        st = st->getPrev();
+    SymbolEntry* se = new IdentifierSymbolEntry(funcType, yytext, st->getLevel(), -1, true);
+    st->install(yytext, se);
+    return ID;
+}
+
+"putf" {
+    char *lexeme;
+    lexeme = new char[strlen(yytext) + 1];
+    strcpy(lexeme, yytext);
+    yylval.strtype = lexeme;
+    std::vector<Type*> vec;
+    std::vector<SymbolEntry*> vec1;
+    StringType* str = new StringType(0);
+    vec.push_back(str);
+    Type* funcType = new FunctionType(TypeSystem::voidType, vec,vec1);
+    SymbolTable* st = identifiers;
+    while(st->getPrev())
+        st = st->getPrev();
+    SymbolEntry* se = new IdentifierSymbolEntry(funcType, yytext, st->getLevel(), -1, true);
+    st->install(yytext, se);
+    return ID;
+}
 "starttime" {
     char *lexeme;
     lexeme = new char[strlen(yytext) + 1];
@@ -646,6 +701,15 @@ commentlineend \n
         return ID;
     #endif
 }
+
+{STRING} {
+    char* lexeme;
+    lexeme = new char[strlen(yytext) + 1];
+    strcpy(lexeme, yytext);
+    yylval.strtype = lexeme;
+    return STRING;
+}
+
 {EOL} {
     #ifdef ONLY_FOR_LEX
     cnt=0;

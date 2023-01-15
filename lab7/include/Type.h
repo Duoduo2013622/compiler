@@ -9,7 +9,7 @@ class Type
 private:
     int kind;
 protected:
-    enum {INT, FLOAT, VOID, FUNC, PTR};
+    enum {INT, FLOAT, VOID, FUNC, PTR, ARRAY, STRING };
     int size;
 public:
     Type(int kind, int size = 0) : kind(kind),size(size) {};
@@ -20,6 +20,8 @@ public:
     bool isVoid() const {return kind == VOID;};
     bool isFunc() const {return kind == FUNC;};
     bool isPtr() const { return kind == PTR; };
+    bool isArray() const { return kind == ARRAY; };
+    bool isString() const { return kind == STRING; };
     int getKind() const { return kind; };
      int getSize() const { return size; };
 };
@@ -79,7 +81,38 @@ class PointerType : public Type {
     Type* getType() const { return valueType; };
 };
 
+class ArrayType : public Type {
+   private:
+    Type* elementType;
+    Type* arrayType = nullptr;
+    int length;
+    bool constant;
 
+   public:
+    ArrayType(Type* elementType, int length, bool constant = false)
+        : Type(Type::ARRAY),
+          elementType(elementType),
+          length(length),
+          constant(constant) {
+        size = elementType->getSize() * length;
+    };
+    std::string toStr();
+    int getLength() const { return length; };
+    Type* getElementType() const { return elementType; };
+    void setArrayType(Type* arrayType) { this->arrayType = arrayType; };
+    bool isConst() const { return constant; };
+    Type* getArrayType() const { return arrayType; };
+};
+
+class StringType : public Type {
+   private:
+    int length;
+
+   public:
+    StringType(int length) : Type(Type::STRING), length(length){};
+    int getLength() const { return length; };
+    std::string toStr();
+};
 
 class TypeSystem
 {

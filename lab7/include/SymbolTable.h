@@ -47,6 +47,7 @@ public:
     SymbolTable* getPrev() {return prev;};
     int getLevel() {return level;};
     static int getLabel() {return counter++;}; //函数调用的级数
+    static void resetLabel() { counter = 0; };
 };
 
 /*  
@@ -60,11 +61,15 @@ class ConstantSymbolEntry : public SymbolEntry
 {
 private:
     int value;
+    std::string strValue;
 
 public:
     ConstantSymbolEntry(Type *type, int value);
+    ConstantSymbolEntry(Type* type, std::string strValue);
+    ConstantSymbolEntry(Type* type);
     virtual ~ConstantSymbolEntry() {};
     int getValue() const {return value;};
+    std::string getStrValue() const;
     std::string toStr();
     // You can add any function you need here.
 };
@@ -105,7 +110,7 @@ private:
     bool sysy;
     Operand *addr;  // The address of the identifier.
     // You can add any field you need here.
-
+    int* arrayValue;
     bool constant;
     int paramCount;
     bool Zero;
@@ -122,6 +127,8 @@ public:
     void setAddr(Operand *addr) {this->addr = addr;};
     void setValue(int value);
     int getValue() const { return value; };
+    void setArrayValue(int* arrayValue);
+    int* getArrayValue() const { return arrayValue; };
     Operand* getAddr() {return addr;};
     // You can add any function you need here.
     int getLabel() const { return label; };

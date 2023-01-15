@@ -38,7 +38,7 @@ protected:
     Instruction *next;
     BasicBlock *parent;
     std::vector<Operand*> operands;
-    enum {BINARY, COND, UNCOND, RET, LOAD, STORE, CMP, ALLOCA, CALL, ZEXT, XOR}; //增加GEP
+    enum {BINARY, COND, UNCOND, RET, LOAD, STORE, CMP, ALLOCA, CALL, ZEXT, XOR, GEP}; 
 };
 
 // meaningless instruction, used as the head node of the instruction list.
@@ -168,6 +168,23 @@ public:
     void output() const;
     void genMachineCode(AsmBuilder*);
 };
+class GepInstruction : public Instruction {
+   private:
+    bool paramFirst;
+    bool first;
+    bool last;
+    Operand* init;
 
+   public:
+    GepInstruction(Operand* dst,Operand* arr,Operand* idx,BasicBlock* insert_bb = nullptr,bool paramFirst = false);
+    ~GepInstruction();
+    void output() const;
+    void genMachineCode(AsmBuilder*);
+    void setFirst() { first = true; };
+    void setLast() { last = true; };
+    Operand* getInit() const { return init; };
+    void setInit(Operand* init) { this->init = init; };
+
+};
 
 #endif

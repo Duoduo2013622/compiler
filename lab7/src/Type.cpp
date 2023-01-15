@@ -41,7 +41,38 @@ std::string FunctionType::toStr()
     buffer << ')';
     return buffer.str();
 }
-
+std::string ArrayType::toStr() {
+    std::vector<std::string> vec;
+    Type* temp = this;
+    int count = 0;
+    bool flag = false;
+    while (temp && temp->isArray()) {
+        std::ostringstream buffer;
+        if (((ArrayType*)temp)->getLength() == -1) {
+            flag = true;
+        } else {
+            buffer << "[" << ((ArrayType*)temp)->getLength() << " x ";
+            count++;
+            vec.push_back(buffer.str());
+        }
+        temp = ((ArrayType*)temp)->getElementType();
+    }
+    assert(temp->isInt());
+    std::ostringstream buffer;
+    for (auto it = vec.begin(); it != vec.end(); it++)
+        buffer << *it;
+    buffer << "i32";
+    while (count--)
+        buffer << ']';
+    if (flag)
+        buffer << '*';
+    return buffer.str();
+}
+std::string StringType::toStr() {
+    std::ostringstream buffer;
+    buffer << "const char[" << length << "]";
+    return buffer.str();
+}
 
 std::string PointerType::toStr()
 {
